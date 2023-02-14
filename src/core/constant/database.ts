@@ -1,0 +1,4 @@
+export const MONGO_USERNAME = 'MONGO_USERNAME';
+export const MONGO_PASSWORD = 'MONGO_PASSWORD';
+export const MONGO_DATABASE = 'MONGO_DATABASE';
+export const MONGO_HOST = 'MONGO_HOST';
