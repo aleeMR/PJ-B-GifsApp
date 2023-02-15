@@ -3,6 +3,7 @@
 /node_modules
 
 # Logs
+LOG/*
 logs
 *.log
 npm-debug.log*
@@ -13,6 +14,10 @@ lerna-debug.log*
 
 # OS
 .DS_Store
+
+# Env
+.env
+
 
 # Tests
 /coverage
