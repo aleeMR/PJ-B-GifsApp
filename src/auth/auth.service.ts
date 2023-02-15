@@ -1,11 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Payload } from '@core/interface';
+import { Payload, Response } from '@core/interface';
 import { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { compare } from 'bcryptjs';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { MSG_OK } from '@core/constant';
 
 @Injectable()
 export class AuthService {
@@ -30,7 +30,10 @@ export class AuthService {
     };
   }
 
-  async validateEmailWithPassword(email: string, password: string): Promise<User> {
+  async validateEmailWithPassword(
+    email: string,
+    password: string,
+  ): Promise<User> {
     this.logger.log('validation user');
     const user = await this.userService.findUserByEmail(email);
 
@@ -48,28 +51,30 @@ export class AuthService {
     return null;
   }
 
-
-  forgotPassword(email: string){
-    
-  }
-
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
-  }
-
-  findAll() {
-    return `This action returns all auth`;
+  forgotPassword(email: string): Promise<Response> {
+    return this.userService.resetUser(email);
   }
 
   findOne(email: string) {
     return this.userService.findUserByEmail(email);
   }
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
+  async changePassword(
+    userPayload: Payload,
+    { oldPassword, newPassword }: ChangePasswordDto,
+  ) : Promise<Response> {
+    this.logger.log({ message: 'Change password user', userPayload });
+    const user = await this.userService.findUserByEmail(userPayload.email);
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+    const matchPassword = await compare(oldPassword, user.password);
+
+    if (!matchPassword) {
+      throw new BadRequestException('User not matching old password');
+    }
+
+    user.password = newPassword;
+    await this.userService.updatePassword(user);
+
+    return { message: MSG_OK, info: 'Change password Successfully' };
   }
 }

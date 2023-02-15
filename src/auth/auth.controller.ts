@@ -5,14 +5,14 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   UseGuards,
 } from '@nestjs/common';
-import { UserDecorator } from '../core/config/decorators';
+import { UserDecorator } from '@core/config/decorators';
+import { Payload } from '@core/interface';
 import { User } from '../users/entities/user.entity';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 
 @Controller('auth')
@@ -27,6 +27,15 @@ export class AuthController {
 
   @Get('forgot-password/:email')
   forgotPassword(@Param('email') email: string) {
-    return { email };
+    return this.authService.forgotPassword(email);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('change-password')
+  changePassword(
+    @UserDecorator() user: Payload,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(user, changePasswordDto);
   }
 }

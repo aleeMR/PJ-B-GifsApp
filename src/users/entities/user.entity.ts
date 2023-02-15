@@ -5,6 +5,7 @@ import { ListFavorite } from '../../list-favorites';
 
 @Schema()
 export class User extends Document {
+
   @Prop({
     unique: true,
     index: true,

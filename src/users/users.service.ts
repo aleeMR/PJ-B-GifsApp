@@ -11,15 +11,18 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { generateHashPassword } from '@core/util';
-import { Response } from '@core/interface';
+import { Payload, Response } from '@core/interface';
 import { generate } from 'generate-password';
 import { transporter } from '@core/config';
+import { AwsS3Service } from '../core/services';
+import { fileNamer } from '../core/helper';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
   constructor(
+    private readonly awsS3Service: AwsS3Service,
     @InjectModel(User.name) private readonly userModel: Model<User>,
   ) {}
 
@@ -39,8 +42,26 @@ export class UsersService {
     return { message: MSG_OK, info: 'User created successfully' };
   }
 
-  findAll() {
-    return `This action returns all users`;
+  async updateUser(
+    user: Payload,
+    updateUserDto: UpdateUserDto,
+  ): Promise<Response> {
+    this.logger.log({ message: 'Update user', updateUserDto });
+    try {
+      const response = await this.userModel.findOneAndUpdate(
+        { email: user.email },
+        {
+          firstName: updateUserDto.firstName,
+          lastName: updateUserDto.lastName,
+        },
+      );
+
+      console.log(response);
+    } catch (error) {
+      this.logger.error({ message: 'Error updating user', error });
+      throw new InternalServerErrorException('Error updating user profile');
+    }
+    return { message: MSG_OK, info: 'user update profile successfuly' };
   }
 
   async findUserByEmail(email: string): Promise<User> {
@@ -52,8 +73,6 @@ export class UsersService {
     }
   }
 
-
-  //TODO: Explain why this function
   async resetUser(email: string) {
     const user = await this.findUserByEmail(email);
 
@@ -71,6 +90,10 @@ export class UsersService {
         symbols: '(_)$°@*-+',
       });
 
+      user.password = generatePassword;
+
+      await this.updatePassword(user);
+
       await transporter.sendMail({
         from: 'BackEnd GifApplication By Amincia',
         to: email,
@@ -81,12 +104,15 @@ export class UsersService {
       this.logger.error({ message: 'Error sending email', error });
       throw new InternalServerErrorException('Error sending reset mail');
     }
+
+    return { message: MSG_OK, info: 'User account reset successfuly' };
   }
 
-  async updatePassword(user: User) {
+  // Awesome BackEnd
+  async updatePassword(user: User): Promise<Response> {
     try {
       await this.userModel.findByIdAndUpdate(user._id, {
-        password: user.password,
+        password: generateHashPassword(user.password),
       });
     } catch (error) {
       this.logger.error({
@@ -99,11 +125,39 @@ export class UsersService {
     return { message: MSG_OK, info: 'Password updated successfully' };
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async removeUser(user: Payload): Promise<Response> {
+    try {
+      await this.userModel.findOneAndRemove({ email: user.email });
+    } catch (error) {
+      this.logger.error({ message: 'Error removing user', error });
+      throw new InternalServerErrorException('Error removing user');
+    }
+
+    return { message: MSG_OK, info: 'User removing successfuly' };
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async userUploadPhoto(
+    file: Express.Multer.File,
+    user: Payload,
+  ): Promise<Response> {
+    this.logger.log({ message: 'Uploading photo', user });
+    try {
+      const { Location } = await this.awsS3Service.uploadFile(
+        file.buffer,
+        fileNamer(file, user.email),
+      );
+
+      await this.userModel.findOneAndUpdate(
+        { email: user.email },
+        {
+          image: Location,
+        },
+      );
+    } catch (error) {
+      this.logger.error({ message: 'Error uploading image profile', error });
+      throw new InternalServerErrorException('Error uploading image profile');
+    }
+
+    return { message: MSG_OK, info: 'Update Image Profile Successfully' };
   }
 }

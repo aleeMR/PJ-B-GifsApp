@@ -4,13 +4,20 @@ import {
   Post,
   Body,
   Patch,
-  Param,
   Delete,
   Logger,
+  UseGuards,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserDecorator } from '@core/config/decorators';
+import { Payload } from '@core/interface';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { fileFilter, maxSizeFile } from '@core/helper';
 
 @Controller('users')
 export class UsersController {
@@ -23,20 +30,32 @@ export class UsersController {
     return this.usersService.createUser(createUserDto);
   }
 
-  @Get()
-  findAll() {
-    return this.usersService.findAll();
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  getProfile(@UserDecorator() user: Payload) {
+    return user;
   }
 
- 
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+  @UseGuards(JwtAuthGuard)
+  @Patch()
+  update(@UserDecorator() user: Payload, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.updateUser(user, updateUserDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  @UseGuards(JwtAuthGuard)
+  @Delete()
+  removeUser(@UserDecorator() user: Payload) {
+    return this.usersService.removeUser(user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('upload-photo')
+  @UseInterceptors(FileInterceptor('file', { fileFilter: fileFilter }))
+  userUploadPhoto(
+    @UploadedFile() file: Express.Multer.File,
+    @UserDecorator() user: Payload,
+  ) {
+    maxSizeFile(file);
+    return this.usersService.userUploadPhoto(file, user);
   }
 }
