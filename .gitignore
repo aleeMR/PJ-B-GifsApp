@@ -5,6 +5,7 @@
 # Logs
 LOG/*
 logs
+logs/*.json
 *.log
 npm-debug.log*
 pnpm-debug.log*
