@@ -4,7 +4,7 @@ import { Document } from 'mongoose';
 @Schema()
 export class ListFavorite extends Document {
   @Prop({
-    unique: true,
+    unique: false,
     index: true,
   })
   id: string;
@@ -14,6 +14,9 @@ export class ListFavorite extends Document {
 
   @Prop({ default: '' })
   title: string;
+
+  @Prop()
+  userEmail: string;
 }
 
 export const ListFavoriteSchema = SchemaFactory.createForClass(ListFavorite);
